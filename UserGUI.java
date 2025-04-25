@@ -5,6 +5,7 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 
 import javax.imageio.ImageIO;
 import javax.swing.ImageIcon;
@@ -50,6 +51,16 @@ public class UserGUI {
 
 		Polygon drillPath = ShapeAnalyzer.buildDrillPath(shape, 8);
 		System.out.println("Done builiding the "+drillPath.npoints+" point drill path");
+		
+		CNCSpecs specs = new CNCSpecs(4, 5, 1, 600, 400, 0.01);
+		ArrayList<Vector2> polarCords = ShapeAnalyzer.polygonToPolar(drillPath, specs);
+		System.out.println("Ther are "+polarCords.size()+" polar cooridnates");
+		ArrayList<Vector2> cncCords = ShapeAnalyzer.quantizeCords(polarCords, specs);
+		System.out.println("There are "+cncCords.size()+" plotted points on the drill path");
+		ArrayList<Integer> problemPoints = ShapeAnalyzer.uninterpolatedPoints(cncCords);
+		System.out.println("There are "+problemPoints.size()+" points that need to have interpolation");
+
+		
 		for(int i=0; i<drillPath.npoints; i++ ) {
 			//drillPath.ypoints[i] +=100;
 			//drillPath.xpoints[i] += 300;
@@ -63,6 +74,15 @@ public class UserGUI {
                 g.drawPolygon(shape);
                 g.setColor(Color.RED);
                 g.drawPolygon(drillPath);
+                
+                g.fillOval(596, 396, 8, 8);
+                
+                //Printing some lines
+                /*
+                g.setColor(Color.BLUE);
+                for(int i=0; i<polarCords.size(); i+=20) {
+                	g.drawLine(600, 400, 600+(int)(polarCords.get(i).r*Math.cos(polarCords.get(i).theta)), 400+(int)(polarCords.get(i).r*Math.sin(polarCords.get(i).theta)));
+                }*/
                 
                 //System.out.println("I drew the polygon");
             }
@@ -96,4 +116,6 @@ public class UserGUI {
 	    outputImage.getGraphics().drawImage(resultingImage, 0, 0, null);
 	    return outputImage;
 	}
+	
+	
 }

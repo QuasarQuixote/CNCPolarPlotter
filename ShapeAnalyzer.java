@@ -1,6 +1,7 @@
 package polarMaker;
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.util.ArrayList;
 
 public class ShapeAnalyzer {
 
@@ -215,5 +216,80 @@ public class ShapeAnalyzer {
 		if(dx<0 && dy<0) return STEP_DIR.UPLEFT;
 		System.out.println("Invalid find step.");
 		return STEP_DIR.UPLEFT;
+	}
+	
+	public static ArrayList<Vector2> polygonToPolar(Polygon shape, CNCSpecs specs){
+		ArrayList<Vector2> polarCords = new ArrayList<Vector2>();
+		
+		for(int i=0; i<shape.npoints; i++) {
+			int x = shape.xpoints[i]-specs.centerX;
+			int y = shape.ypoints[i]-specs.centerY;
+			
+			double r = Math.sqrt((x*x)+(y*y));
+			double theta = Math.atan2(y, x);
+			if(theta<0)theta+=2*Math.PI;
+			polarCords.add(new Vector2(r, theta));
+			
+		}
+		return polarCords;
+	}
+	
+	public static ArrayList<Vector2> quantizeCords(ArrayList<Vector2> cords, CNCSpecs specs){
+		ArrayList<Vector2> discreteCords = new ArrayList<Vector2>();
+		int j=0;
+		for(int i=0; i<cords.size(); i++) {
+			
+			double rSteps = (double)Math.round(cords.get(i).r * specs.stepsPerPixel);			
+			double angleSteps = (double)Math.round((cords.get(i).theta*specs.rotationalSteps)/(2*Math.PI));
+			
+			if(j==0 || (rSteps!=discreteCords.getLast().r||angleSteps!=discreteCords.getLast().theta)) {
+				discreteCords.add(new Vector2(rSteps, angleSteps));
+				j++;
+			}
+		}
+		
+		return discreteCords;
+	}
+	
+	public static ArrayList<Integer> uninterpolatedPoints(ArrayList<Vector2> discreteCords) {
+		ArrayList<Integer> pointsThatNeedWork = new ArrayList<Integer>();
+		
+		for(int i=0; i<discreteCords.size()-1; i++) {
+			int dr = (int)(discreteCords.get(i).r-discreteCords.get(i+1).r);
+			int dTheta = (int)(discreteCords.get(i).theta-discreteCords.get(i+1).theta);
+			if(Math.abs(dTheta)>1 || Math.abs(dr)>1) pointsThatNeedWork.add(i);
+		}
+		
+		return pointsThatNeedWork;
+	}
+	
+	public static ArrayList<Vector2> Interpolate(ArrayList<Vector2> discreteCords, int index){
+		ArrayList<Vector2> interpolatedPoints = new ArrayList<Vector2>();
+		Vector2 start = discreteCords.get(index);
+		Vector2 end = discreteCords.get(index+1);
+		int dr = (int)(end.r-start.r);
+		int dTheta = (int)(end.r-start.r);
+		if(dr == 0) {
+			for(int i=1; i<dTheta; i++) {
+				interpolatedPoints.add(new Vector2(start.r, start.theta+i));
+			}
+		} else if(dTheta ==0) {
+			for(int i=1; i<dr; i++) {
+				interpolatedPoints.add(new Vector2(start.r+i, start.theta));
+			}
+		} else if (dTheta>dr) {
+			double drdTheta = (((double) dr)/dTheta);
+			for(int i=1; i<dTheta; i++) {
+				interpolatedPoints.add(new Vector2(start.r + Math.round(drdTheta*i), start.theta+i));
+			}
+		} else {
+			double dThetaDr = (((double) dTheta)/dr);
+			for(int i=1; i<dr; i++) {
+				interpolatedPoints.add(new Vector2(start.r + i, start.theta+Math.round(i*dThetaDr)));
+			}
+		}
+		
+		
+		return interpolatedPoints;
 	}
 }
