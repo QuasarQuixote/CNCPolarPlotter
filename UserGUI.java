@@ -52,14 +52,53 @@ public class UserGUI {
 		Polygon drillPath = ShapeAnalyzer.buildDrillPath(shape, 8);
 		System.out.println("Done builiding the "+drillPath.npoints+" point drill path");
 		
-		CNCSpecs specs = new CNCSpecs(4, 5, 1, 600, 400, 0.01);
+		CNCSpecs specs = new CNCSpecs(200, 600, 60, 600, 400, 2);
 		ArrayList<Vector2> polarCords = ShapeAnalyzer.polygonToPolar(drillPath, specs);
 		System.out.println("Ther are "+polarCords.size()+" polar cooridnates");
 		ArrayList<Vector2> cncCords = ShapeAnalyzer.quantizeCords(polarCords, specs);
+		
 		System.out.println("There are "+cncCords.size()+" plotted points on the drill path");
+		ShapeAnalyzer.addStart(cncCords, specs);
 		ArrayList<Integer> problemPoints = ShapeAnalyzer.uninterpolatedPoints(cncCords);
 		System.out.println("There are "+problemPoints.size()+" points that need to have interpolation");
-
+		ShapeAnalyzer.interpolatePath(cncCords, problemPoints);
+		ArrayList<Integer> extremelyTroublesomePoints = ShapeAnalyzer.uninterpolatedPoints(cncCords);
+		System.out.println("There are "+extremelyTroublesomePoints.size()+" extremely troublesome points.");
+		
+		//useless cycling
+		/*
+		System.out.println("cycling the methods 5 times.");
+		int cycles = 0;
+		while(ShapeAnalyzer.uninterpolatedPoints(cncCords).size()!=0) {
+			if(cycles == 5) {
+				System.out.println("failed after 5 extra cycles leaving "+ShapeAnalyzer.uninterpolatedPoints(cncCords).size()+" meddlesome points");
+				break;
+			}
+			ShapeAnalyzer.interpolatePath(cncCords, ShapeAnalyzer.uninterpolatedPoints(cncCords));
+			cycles++;
+			
+		}*/
+		
+		/*
+		CNCSpecs testSpecs = new CNCSpecs(4, 5, 0, 0, 0, 1);
+		ArrayList<Vector2> testCords = new ArrayList<Vector2>();
+		testCords.add(new Vector2(2, 0));
+		testCords.add(new Vector2(1, 3));
+		testCords.add(new Vector2(3, 4));
+		System.out.println("Starting test coords:");
+		for(int i=0; i<testCords.size(); i++)System.out.println("  "+testCords.get(i));
+		ShapeAnalyzer.interpolatePath(testCords, ShapeAnalyzer.uninterpolatedPoints(testCords));
+		System.out.println("Interpolated test coords:");
+		for(int i=0; i<testCords.size(); i++)System.out.println("  "+testCords.get(i));
+		System.out.print("there are "+ShapeAnalyzer.uninterpolatedPoints(testCords).size()+" uninterpolated points remaining");
+		*/ //testing stuff
+		if(ShapeAnalyzer.uninterpolatedPoints(cncCords).size()!=0) {
+			System.out.println("Interpolation failure");
+			return;
+		}
+		
+		System.out.println("Succesful cnc path created.");
+		for(Vector2 point:cncCords) System.out.println(point);
 		
 		for(int i=0; i<drillPath.npoints; i++ ) {
 			//drillPath.ypoints[i] +=100;
@@ -76,6 +115,8 @@ public class UserGUI {
                 g.drawPolygon(drillPath);
                 
                 g.fillOval(596, 396, 8, 8);
+                g.setColor(Color.BLUE);
+                g.fillOval(drillPath.xpoints[0]-4, drillPath.ypoints[0]-4, 8, 8);
                 
                 //Printing some lines
                 /*

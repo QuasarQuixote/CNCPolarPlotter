@@ -263,33 +263,56 @@ public class ShapeAnalyzer {
 		return pointsThatNeedWork;
 	}
 	
-	public static ArrayList<Vector2> Interpolate(ArrayList<Vector2> discreteCords, int index){
+	public static ArrayList<Vector2> interpolate(ArrayList<Vector2> discreteCords, int index){
+		System.out.print("Interpolating point #"+index+"  ");
+		
 		ArrayList<Vector2> interpolatedPoints = new ArrayList<Vector2>();
 		Vector2 start = discreteCords.get(index);
 		Vector2 end = discreteCords.get(index+1);
+		System.out.print("Start: "+start+"  End: "+end+"   ");
 		int dr = (int)(end.r-start.r);
-		int dTheta = (int)(end.r-start.r);
+		int dTheta = (int)(end.theta-start.theta);
+		System.out.println(" dR: "+dr+",  dTheta: "+dTheta);
 		if(dr == 0) {
-			for(int i=1; i<dTheta; i++) {
+			for(int i=1*(dTheta/Math.abs(dTheta)); i!=dTheta; i+=(dTheta/Math.abs(dTheta))) {
 				interpolatedPoints.add(new Vector2(start.r, start.theta+i));
 			}
 		} else if(dTheta ==0) {
-			for(int i=1; i<dr; i++) {
+			for(int i=1*(dr/Math.abs(dr)); i!=dr; i+= dr/Math.abs(dr)) {
 				interpolatedPoints.add(new Vector2(start.r+i, start.theta));
 			}
-		} else if (dTheta>dr) {
+		} else if (Math.abs(dTheta)>Math.abs(dr)) {
 			double drdTheta = (((double) dr)/dTheta);
-			for(int i=1; i<dTheta; i++) {
+			for(int i=1*(dTheta/Math.abs(dTheta)); i!=dTheta; i+= dTheta/Math.abs(dTheta)) {
 				interpolatedPoints.add(new Vector2(start.r + Math.round(drdTheta*i), start.theta+i));
 			}
 		} else {
 			double dThetaDr = (((double) dTheta)/dr);
-			for(int i=1; i<dr; i++) {
+			for(int i=1*(dr/Math.abs(dr)); i!=dr; i+= dr/Math.abs(dr)) {
 				interpolatedPoints.add(new Vector2(start.r + i, start.theta+Math.round(i*dThetaDr)));
 			}
 		}
 		
 		
 		return interpolatedPoints;
+	}
+	
+	public static void addStart(ArrayList<Vector2> discreteCords, CNCSpecs specs) {
+		discreteCords.add(0, new Vector2(specs.displacingSteps, discreteCords.get(0).theta));
+	}
+	
+	public static void interpolatePath(ArrayList<Vector2> discretePath, ArrayList<Integer> indexes) {
+		ArrayList<Vector2> subPath;
+		int subPathLength;
+		for(int i=0; i<indexes.size(); i++) {
+			subPath = interpolate(discretePath, indexes.get(i));
+			subPathLength = subPath.size();
+			for(int j=0; j<subPathLength; j++) {
+				discretePath.add((indexes.get(i)+1+j), subPath.get(j));
+			}
+			for(int j=i+1; j<indexes.size(); j++) {
+				indexes.set(j, indexes.get(j)+subPathLength);
+			}
+		}
 	}
 }

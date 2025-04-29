@@ -8,4 +8,8 @@ public class Vector2 {
 		this.r = r;
 		this.theta = theta;
 	}
+	
+	public String toString() {
+		return "(r: "+r+", theta: "+theta+")";
+	}
 }
