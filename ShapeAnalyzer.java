@@ -1,6 +1,8 @@
 package polarMaker;
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 
 public class ShapeAnalyzer {
@@ -264,7 +266,7 @@ public class ShapeAnalyzer {
 	}
 	
 	public static ArrayList<Vector2> interpolate(ArrayList<Vector2> discreteCords, int index){
-		System.out.print("Interpolating point #"+index+"  ");
+		//System.out.print("Interpolating point #"+index+"  ");
 		
 		ArrayList<Vector2> interpolatedPoints = new ArrayList<Vector2>();
 		Vector2 start = discreteCords.get(index);
@@ -314,5 +316,44 @@ public class ShapeAnalyzer {
 				indexes.set(j, indexes.get(j)+subPathLength);
 			}
 		}
+	}
+	public static void writePath(FileWriter outputWriter, ArrayList<Vector2> cncCords) throws IOException {
+		Vector2 start = cncCords.get(0);
+		Vector2 end = cncCords.get(1);
+		int dr;
+		int dtheta;
+		for(int i=0; i<cncCords.size()-1; i++) {
+			end = cncCords.get(i+1);
+			dr = (int)(end.r-start.r);
+			dtheta = (int)(end.theta-start.theta);
+			if(dr==1&&dtheta==0) outputWriter.write("0");
+			else if(dr==1&&dtheta==1) outputWriter.write("1");
+			else if(dr==0&&dtheta==1) outputWriter.write("2");
+			else if(dr==-1&&dtheta==1) outputWriter.write("3");
+			else if(dr==-1&&dtheta==0) outputWriter.write("4");
+			else if(dr==-1&&dtheta==-1) outputWriter.write("5");
+			else if(dr==0&&dtheta==-1) outputWriter.write("6");
+			else if(dr==1&&dtheta==-1) outputWriter.write("7");
+			else System.out.println("Disctontinuity at point: "+i+", dr = "+dr+", dtheta = "+dtheta);
+			start = end;
+		}
+	}
+	
+	public static Polygon cncCordsToPolygon(ArrayList<Vector2> cncCords, CNCSpecs specs) {
+		Polygon cncRepresentation = new Polygon();
+		
+		int x;
+		int y;
+		int j = 0;
+		for(int i=0; i<cncCords.size(); i++) {
+			x = (int)(specs.centerX + (cncCords.get(i).r/specs.stepsPerPixel)*( Math.cos(2*Math.PI*((specs.rotationalSteps)/(cncCords.get(i).theta)))));
+			y = (int)(specs.centerY + (cncCords.get(i).r/specs.stepsPerPixel)*( Math.sin(2*Math.PI*((specs.rotationalSteps)/(cncCords.get(i).theta)))));
+			if(j==0||x!=cncRepresentation.xpoints[j-1]||y!=cncRepresentation.xpoints[j-1]) {
+				cncRepresentation.addPoint(x, y);
+				j++;
+			}
+		}
+		
+		return cncRepresentation;
 	}
 }

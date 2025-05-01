@@ -4,6 +4,7 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 
@@ -14,7 +15,7 @@ import javax.swing.JLabel;
 import javax.swing.*;
 
 public class UserGUI {
-	public static void main(String[] args) {
+	public static void main(String[] args) throws IOException {
 		JFrame gui = new JFrame("Picture to Polar Converter");
 		gui.setSize(2000,2000);
 		gui.getContentPane().setLayout(new FlowLayout());
@@ -43,27 +44,37 @@ public class UserGUI {
 		}
 		
 		//test polygon
+		/*
 		Polygon square = new Polygon();
 		square.addPoint(100, 200);
 		square.addPoint(100, 400);
 		square.addPoint(300, 400);
-		square.addPoint(300, 200);
+		square.addPoint(300, 200);*/
 
 		Polygon drillPath = ShapeAnalyzer.buildDrillPath(shape, 8);
 		System.out.println("Done builiding the "+drillPath.npoints+" point drill path");
 		
 		CNCSpecs specs = new CNCSpecs(200, 600, 60, 600, 400, 2);
 		ArrayList<Vector2> polarCords = ShapeAnalyzer.polygonToPolar(drillPath, specs);
+		System.out.println("converted polygon to polar:");
+		for(Vector2 cord : polarCords) System.out.println(cord);
+		
 		System.out.println("Ther are "+polarCords.size()+" polar cooridnates");
 		ArrayList<Vector2> cncCords = ShapeAnalyzer.quantizeCords(polarCords, specs);
+		System.out.println("Quantized coordinates: ");
+		for(Vector2 cord : cncCords) System.out.println(cord);
+
 		
 		System.out.println("There are "+cncCords.size()+" plotted points on the drill path");
+		Polygon polygonRep = ShapeAnalyzer.cncCordsToPolygon(cncCords, specs);
 		ShapeAnalyzer.addStart(cncCords, specs);
 		ArrayList<Integer> problemPoints = ShapeAnalyzer.uninterpolatedPoints(cncCords);
 		System.out.println("There are "+problemPoints.size()+" points that need to have interpolation");
 		ShapeAnalyzer.interpolatePath(cncCords, problemPoints);
 		ArrayList<Integer> extremelyTroublesomePoints = ShapeAnalyzer.uninterpolatedPoints(cncCords);
 		System.out.println("There are "+extremelyTroublesomePoints.size()+" extremely troublesome points.");
+		System.out.println("Interpolated Cooridnates: ");
+		for(Vector2 cord : cncCords) System.out.println(cord);
 		
 		//useless cycling
 		/*
@@ -98,7 +109,13 @@ public class UserGUI {
 		}
 		
 		System.out.println("Succesful cnc path created.");
-		for(Vector2 point:cncCords) System.out.println(point);
+		System.out.println("Creating Stepper file...");
+		File output = new File("PenguinSteps");
+		output.createNewFile();
+		FileWriter outputWriter = new FileWriter(output);
+		ShapeAnalyzer.writePath(outputWriter, cncCords);
+		
+		
 		
 		for(int i=0; i<drillPath.npoints; i++ ) {
 			//drillPath.ypoints[i] +=100;
@@ -117,7 +134,7 @@ public class UserGUI {
                 g.fillOval(596, 396, 8, 8);
                 g.setColor(Color.BLUE);
                 g.fillOval(drillPath.xpoints[0]-4, drillPath.ypoints[0]-4, 8, 8);
-                
+                g.drawPolygon(polygonRep);
                 //Printing some lines
                 /*
                 g.setColor(Color.BLUE);
