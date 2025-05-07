@@ -25,7 +25,7 @@ public class ShapeAnalyzer {
 		STEP_DIR fromStep;
 		STEP_DIR toStep;
 		Polygon relevantPoints = new Polygon();
-		drillPath.addPoint(baseShape.xpoints[0], 0);
+		
 		
 		relevantPoints = findRelevantPoints(0, baseShape, length);
 		System.out.println("First point's relevant points are:  ");
@@ -253,7 +253,7 @@ public class ShapeAnalyzer {
 				j++;
 			}
 		}
-		
+		//discreteCords.add(0, new Vector2(specs.displacingSteps, specs.rotationalSteps/4));
 		return discreteCords;
 	}
 	
@@ -324,7 +324,11 @@ public class ShapeAnalyzer {
 	}
 	
 	public static void addStart(ArrayList<Vector2> discreteCords, CNCSpecs specs) {
-		discreteCords.add(0, new Vector2(specs.displacingSteps, discreteCords.get(0).theta));
+		discreteCords.add(0, new Vector2(specs.displacingSteps, specs.rotationalSteps/4));
+		ArrayList<Vector2> firstLeg = interpolate(discreteCords, 0, specs);
+		for(int i=1; i<=firstLeg.size(); i++) {
+			discreteCords.add(i, firstLeg.get(i-1));
+		}
 	}
 	
 	public static void interpolatePath(ArrayList<Vector2> discretePath, ArrayList<Integer> indexes, CNCSpecs specs) {
@@ -389,5 +393,13 @@ public class ShapeAnalyzer {
 		}
 		
 		return cncRepresentation;
+	}
+	
+	public static boolean inBounds(ArrayList<Vector2> cncCords, CNCSpecs specs) {
+		boolean valid = true;
+		for(int i=0; i<cncCords.size(); i++) {
+			if(cncCords.get(i).r>specs.displacingSteps || cncCords.get(i).r<specs.deadSteps) valid = false;
+		}
+		return valid;
 	}
 }

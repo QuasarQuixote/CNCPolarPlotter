@@ -23,7 +23,8 @@ public class UserGUI {
 		//H:\\real_eclipse\\CS3\\src\\polarMaker\\Drawing-1.sketchpad.png
 		//H:\\real_eclipse\\CS3\\src\\polarMaker\\TransparentBackgroundSun2.png
 		//H:\\real_eclipse\\CS3\\src\\polarMaker\\penguin.png
-		File imgFile = new File("H:\\real_eclipse\\CS3\\src\\polarMaker\\penguin.png");
+		//C:\Users\s112272\Downloads\adamBabyPhoto-removebg-preview.png
+		File imgFile = new File("C:\\Users\\s112272\\Downloads\\adamBabyPhoto-removebg-preview.png");
 		BufferedImage exampleImg;
 		try {
 		    FileInputStream fis = new FileInputStream(imgFile);  
@@ -54,7 +55,7 @@ public class UserGUI {
 		Polygon drillPath = ShapeAnalyzer.buildDrillPath(shape, 8);
 		System.out.println("Done builiding the "+drillPath.npoints+" point drill path");
 		
-		CNCSpecs specs = new CNCSpecs(1600, 3000, 60, 600, 400, 10);
+		CNCSpecs specs = new CNCSpecs(3200, 8000, 2000, 800, 300, 20);
 		ArrayList<Vector2> polarCords = ShapeAnalyzer.polygonToPolar(drillPath, specs);
 		System.out.println("converted polygon to polar:");
 		//for(Vector2 cord : polarCords) System.out.println(cord);
@@ -67,13 +68,15 @@ public class UserGUI {
 		
 		System.out.println("There are "+cncCords.size()+" plotted points on the drill path");
 		
-		ShapeAnalyzer.addStart(cncCords, specs);
+		
 		ArrayList<Integer> problemPoints = ShapeAnalyzer.uninterpolatedPoints(cncCords, specs);
 		System.out.println("There are "+problemPoints.size()+" points that need to have interpolation");
 		ShapeAnalyzer.interpolatePath(cncCords, problemPoints, specs);
+		ShapeAnalyzer.addStart(cncCords, specs);
 		ArrayList<Integer> extremelyTroublesomePoints = ShapeAnalyzer.uninterpolatedPoints(cncCords, specs);
 		System.out.println("There are "+extremelyTroublesomePoints.size()+" extremely troublesome points.");
 		System.out.println("Interpolated Cooridnates: ");
+		if(!ShapeAnalyzer.inBounds(cncCords, specs))System.out.println("Out Of Bounds!");
 		//for(Vector2 cord : cncCords) System.out.println(cord);
 		
 		//useless cycling
@@ -118,7 +121,7 @@ public class UserGUI {
 		System.out.println("Succesful cnc path created.");
 		System.out.println("Creating Stepper file...");
 		Polygon polygonRep = ShapeAnalyzer.cncCordsToPolygon(cncCords, specs);
-		File output = new File("H:\\real_eclipse\\CS3\\src\\polarMaker\\penguinSteps.dat");
+		File output = new File("H:\\real_eclipse\\CS3\\src\\polarMaker\\adamBabySteps.dat");
 		output.createNewFile();
 		FileWriter outputWriter = new FileWriter(output);
 		ShapeAnalyzer.writePath(outputWriter, cncCords, specs);
@@ -139,7 +142,7 @@ public class UserGUI {
                 g.setColor(Color.RED);
                 g.drawPolygon(drillPath);
                 
-                g.fillOval(596, 396, 8, 8);
+                g.fillOval(796, 296, 8, 8);
                 g.setColor(Color.BLUE);
                 g.fillOval(drillPath.xpoints[0]-4, drillPath.ypoints[0]-4, 8, 8);
                 g.drawPolygon(polygonRep);
