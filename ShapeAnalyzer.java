@@ -25,6 +25,7 @@ public class ShapeAnalyzer {
 		STEP_DIR fromStep;
 		STEP_DIR toStep;
 		Polygon relevantPoints = new Polygon();
+		drillPath.addPoint(baseShape.xpoints[0], 0);
 		
 		relevantPoints = findRelevantPoints(0, baseShape, length);
 		System.out.println("First point's relevant points are:  ");
@@ -227,11 +228,14 @@ public class ShapeAnalyzer {
 			int x = shape.xpoints[i]-specs.centerX;
 			int y = shape.ypoints[i]-specs.centerY;
 			
+			
 			double r = Math.sqrt((x*x)+(y*y));
-			double theta = Math.atan2(y, x);
+			double theta = Math.atan2(-1*y, x);
 			if(theta<0)theta+=2*Math.PI;
 			polarCords.add(new Vector2(r, theta));
-			
+			if(i==0) {
+				System.out.println("x: "+x+", y: "+y+", r: "+r+", theta: "+theta);
+			}
 		}
 		return polarCords;
 	}
@@ -253,31 +257,47 @@ public class ShapeAnalyzer {
 		return discreteCords;
 	}
 	
-	public static ArrayList<Integer> uninterpolatedPoints(ArrayList<Vector2> discreteCords) {
+	public static ArrayList<Integer> uninterpolatedPoints(ArrayList<Vector2> discreteCords, CNCSpecs specs) {
 		ArrayList<Integer> pointsThatNeedWork = new ArrayList<Integer>();
 		
 		for(int i=0; i<discreteCords.size()-1; i++) {
 			int dr = (int)(discreteCords.get(i).r-discreteCords.get(i+1).r);
 			int dTheta = (int)(discreteCords.get(i).theta-discreteCords.get(i+1).theta);
-			if(Math.abs(dTheta)>1 || Math.abs(dr)>1) pointsThatNeedWork.add(i);
+			if((Math.abs(Math.abs(dTheta)-specs.rotationalSteps)<=1)) System.out.println("X axis crossing at point: "+i);
+			if((Math.abs(dTheta)>1 || Math.abs(dr)>1) && (Math.abs(Math.abs(dTheta)-specs.rotationalSteps)>1)) pointsThatNeedWork.add(i);
 		}
 		
 		return pointsThatNeedWork;
 	}
 	
-	public static ArrayList<Vector2> interpolate(ArrayList<Vector2> discreteCords, int index){
+	public static ArrayList<Vector2> interpolate(ArrayList<Vector2> discreteCords, int index, CNCSpecs specs){
 		//System.out.print("Interpolating point #"+index+"  ");
 		
 		ArrayList<Vector2> interpolatedPoints = new ArrayList<Vector2>();
 		Vector2 start = discreteCords.get(index);
 		Vector2 end = discreteCords.get(index+1);
-		System.out.print("Start: "+start+"  End: "+end+"   ");
+		//System.out.print("Start: "+start+"  End: "+end+"   ");
 		int dr = (int)(end.r-start.r);
 		int dTheta = (int)(end.theta-start.theta);
-		System.out.println(" dR: "+dr+",  dTheta: "+dTheta);
+		
+		if(Math.abs(dTheta)>Math.abs(Math.abs(dTheta)-specs.rotationalSteps)) {
+			System.out.print("Crossing stuff... index: "+index+", dtheta: "+dTheta);
+			if(dTheta>0) {
+				System.out.print(", dTheta is greater than 0");
+				dTheta -= specs.rotationalSteps;
+			}
+			else if(dTheta<0) {
+				System.out.print(", dTheta is greater than 0");
+				dTheta += specs.rotationalSteps;
+			}
+			System.out.println(", new dtheta: "+dTheta);
+		}
+		//System.out.println(" dR: "+dr+",  dTheta: "+dTheta);
 		if(dr == 0) {
 			for(int i=1*(dTheta/Math.abs(dTheta)); i!=dTheta; i+=(dTheta/Math.abs(dTheta))) {
 				interpolatedPoints.add(new Vector2(start.r, start.theta+i));
+				if(interpolatedPoints.getLast().theta<0) interpolatedPoints.getLast().theta+=specs.rotationalSteps;
+				if(interpolatedPoints.getLast().theta>specs.rotationalSteps) interpolatedPoints.getLast().theta-=specs.rotationalSteps;
 			}
 		} else if(dTheta ==0) {
 			for(int i=1*(dr/Math.abs(dr)); i!=dr; i+= dr/Math.abs(dr)) {
@@ -287,11 +307,15 @@ public class ShapeAnalyzer {
 			double drdTheta = (((double) dr)/dTheta);
 			for(int i=1*(dTheta/Math.abs(dTheta)); i!=dTheta; i+= dTheta/Math.abs(dTheta)) {
 				interpolatedPoints.add(new Vector2(start.r + Math.round(drdTheta*i), start.theta+i));
+				if(interpolatedPoints.getLast().theta<0) interpolatedPoints.getLast().theta+=specs.rotationalSteps;
+				if(interpolatedPoints.getLast().theta>specs.rotationalSteps) interpolatedPoints.getLast().theta-=specs.rotationalSteps;
 			}
 		} else {
 			double dThetaDr = (((double) dTheta)/dr);
 			for(int i=1*(dr/Math.abs(dr)); i!=dr; i+= dr/Math.abs(dr)) {
 				interpolatedPoints.add(new Vector2(start.r + i, start.theta+Math.round(i*dThetaDr)));
+				if(interpolatedPoints.getLast().theta<0) interpolatedPoints.getLast().theta+=specs.rotationalSteps;
+				if(interpolatedPoints.getLast().theta>specs.rotationalSteps) interpolatedPoints.getLast().theta-=specs.rotationalSteps;
 			}
 		}
 		
@@ -303,11 +327,11 @@ public class ShapeAnalyzer {
 		discreteCords.add(0, new Vector2(specs.displacingSteps, discreteCords.get(0).theta));
 	}
 	
-	public static void interpolatePath(ArrayList<Vector2> discretePath, ArrayList<Integer> indexes) {
+	public static void interpolatePath(ArrayList<Vector2> discretePath, ArrayList<Integer> indexes, CNCSpecs specs) {
 		ArrayList<Vector2> subPath;
 		int subPathLength;
 		for(int i=0; i<indexes.size(); i++) {
-			subPath = interpolate(discretePath, indexes.get(i));
+			subPath = interpolate(discretePath, indexes.get(i), specs);
 			subPathLength = subPath.size();
 			for(int j=0; j<subPathLength; j++) {
 				discretePath.add((indexes.get(i)+1+j), subPath.get(j));
@@ -317,7 +341,7 @@ public class ShapeAnalyzer {
 			}
 		}
 	}
-	public static void writePath(FileWriter outputWriter, ArrayList<Vector2> cncCords) throws IOException {
+	public static void writePath(FileWriter outputWriter, ArrayList<Vector2> cncCords, CNCSpecs specs) throws IOException {
 		Vector2 start = cncCords.get(0);
 		Vector2 end = cncCords.get(1);
 		int dr;
@@ -326,6 +350,16 @@ public class ShapeAnalyzer {
 			end = cncCords.get(i+1);
 			dr = (int)(end.r-start.r);
 			dtheta = (int)(end.theta-start.theta);
+			if(dtheta>specs.rotationalSteps/2) {
+				System.out.print("wrappping dTheta start: "+dtheta);
+				dtheta -= specs.rotationalSteps;
+				System.out.print(" end: "+dtheta);
+			}
+			if(dtheta<-1*specs.rotationalSteps/2) {
+				System.out.print("wrappping dTheta start: "+dtheta);
+				dtheta += specs.rotationalSteps;
+				System.out.print(" end: "+dtheta);
+			}
 			if(dr==1&&dtheta==0) outputWriter.write("0");
 			else if(dr==1&&dtheta==1) outputWriter.write("1");
 			else if(dr==0&&dtheta==1) outputWriter.write("2");
@@ -346,8 +380,8 @@ public class ShapeAnalyzer {
 		int y;
 		int j = 0;
 		for(int i=0; i<cncCords.size(); i++) {
-			x = (int)(specs.centerX + (cncCords.get(i).r/specs.stepsPerPixel)*( Math.cos(2*Math.PI*((specs.rotationalSteps)/(cncCords.get(i).theta)))));
-			y = (int)(specs.centerY + (cncCords.get(i).r/specs.stepsPerPixel)*( Math.sin(2*Math.PI*((specs.rotationalSteps)/(cncCords.get(i).theta)))));
+			x = (int)(specs.centerX + (cncCords.get(i).r/specs.stepsPerPixel)*( Math.cos(2*Math.PI*((cncCords.get(i).theta)/(specs.rotationalSteps)))));
+			y = (int)(specs.centerY - (cncCords.get(i).r/specs.stepsPerPixel)*( Math.sin(2*Math.PI*((cncCords.get(i).theta)/(specs.rotationalSteps)))));
 			if(j==0||x!=cncRepresentation.xpoints[j-1]||y!=cncRepresentation.xpoints[j-1]) {
 				cncRepresentation.addPoint(x, y);
 				j++;

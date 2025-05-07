@@ -54,10 +54,10 @@ public class UserGUI {
 		Polygon drillPath = ShapeAnalyzer.buildDrillPath(shape, 8);
 		System.out.println("Done builiding the "+drillPath.npoints+" point drill path");
 		
-		CNCSpecs specs = new CNCSpecs(200, 600, 60, 600, 400, 2);
+		CNCSpecs specs = new CNCSpecs(1600, 3000, 60, 600, 400, 10);
 		ArrayList<Vector2> polarCords = ShapeAnalyzer.polygonToPolar(drillPath, specs);
 		System.out.println("converted polygon to polar:");
-		for(Vector2 cord : polarCords) System.out.println(cord);
+		//for(Vector2 cord : polarCords) System.out.println(cord);
 		
 		System.out.println("Ther are "+polarCords.size()+" polar cooridnates");
 		ArrayList<Vector2> cncCords = ShapeAnalyzer.quantizeCords(polarCords, specs);
@@ -66,15 +66,15 @@ public class UserGUI {
 
 		
 		System.out.println("There are "+cncCords.size()+" plotted points on the drill path");
-		Polygon polygonRep = ShapeAnalyzer.cncCordsToPolygon(cncCords, specs);
+		
 		ShapeAnalyzer.addStart(cncCords, specs);
-		ArrayList<Integer> problemPoints = ShapeAnalyzer.uninterpolatedPoints(cncCords);
+		ArrayList<Integer> problemPoints = ShapeAnalyzer.uninterpolatedPoints(cncCords, specs);
 		System.out.println("There are "+problemPoints.size()+" points that need to have interpolation");
-		ShapeAnalyzer.interpolatePath(cncCords, problemPoints);
-		ArrayList<Integer> extremelyTroublesomePoints = ShapeAnalyzer.uninterpolatedPoints(cncCords);
+		ShapeAnalyzer.interpolatePath(cncCords, problemPoints, specs);
+		ArrayList<Integer> extremelyTroublesomePoints = ShapeAnalyzer.uninterpolatedPoints(cncCords, specs);
 		System.out.println("There are "+extremelyTroublesomePoints.size()+" extremely troublesome points.");
 		System.out.println("Interpolated Cooridnates: ");
-		for(Vector2 cord : cncCords) System.out.println(cord);
+		//for(Vector2 cord : cncCords) System.out.println(cord);
 		
 		//useless cycling
 		/*
@@ -91,7 +91,7 @@ public class UserGUI {
 		}*/
 		
 		/*
-		CNCSpecs testSpecs = new CNCSpecs(4, 5, 0, 0, 0, 1);
+		CNCSpecs testSpecs = new CNCSpecs(4, 5, 0, 0, 0, .01);
 		ArrayList<Vector2> testCords = new ArrayList<Vector2>();
 		testCords.add(new Vector2(2, 0));
 		testCords.add(new Vector2(1, 3));
@@ -102,18 +102,26 @@ public class UserGUI {
 		System.out.println("Interpolated test coords:");
 		for(int i=0; i<testCords.size(); i++)System.out.println("  "+testCords.get(i));
 		System.out.print("there are "+ShapeAnalyzer.uninterpolatedPoints(testCords).size()+" uninterpolated points remaining");
-		*/ //testing stuff
-		if(ShapeAnalyzer.uninterpolatedPoints(cncCords).size()!=0) {
+		Polygon polygonRep = ShapeAnalyzer.cncCordsToPolygon(testCords, testSpecs);
+		for(int i=0; i<polygonRep.npoints; i++) {
+			polygonRep.xpoints[i]+=500;
+			polygonRep.ypoints[i]+=500;
+		}*/
+		
+		
+		
+		if(ShapeAnalyzer.uninterpolatedPoints(cncCords, specs).size()!=0) {
 			System.out.println("Interpolation failure");
 			return;
 		}
 		
 		System.out.println("Succesful cnc path created.");
 		System.out.println("Creating Stepper file...");
-		File output = new File("PenguinSteps");
+		Polygon polygonRep = ShapeAnalyzer.cncCordsToPolygon(cncCords, specs);
+		File output = new File("H:\\real_eclipse\\CS3\\src\\polarMaker\\penguinSteps.dat");
 		output.createNewFile();
 		FileWriter outputWriter = new FileWriter(output);
-		ShapeAnalyzer.writePath(outputWriter, cncCords);
+		ShapeAnalyzer.writePath(outputWriter, cncCords, specs);
 		
 		
 		
